@@ -11,13 +11,16 @@ type
     segment_snake = record
         cor_x, cor_y: coordinates_type;
         link_next: link_segment;
-        {пока не сделал}
         symbol_segment: string;
     end;
 
     snake = record
         link_first: link_segment;
         direction_head: type_direction;
+    end;
+
+    food = record
+        cor_x, cor_y : coordinates_type;
     end;
 
 procedure write_coordinate_snake(var input_snake : snake);
@@ -148,7 +151,6 @@ begin
     end
 end;
 
-{draw all elements}
 procedure draw_snake(var input_snake : snake);
 const
     snake_part = '0';
@@ -229,66 +231,109 @@ begin
         if ((tmp^^.cor_x = input_snake.link_first^.cor_x) and
             (tmp^^.cor_y = input_snake.link_first^.cor_y)) then
         begin
-            snake_is_die := true;
-            break;
+            counter_head_coordinate := counter_head_coordinate + 1;
         end;
         tmp := @(tmp^^.link_next);
-    end
+    end;
+    if counter_head_coordinate > 1 then
+        snake_is_die := true
+    else
+        snake_is_die := false
    
+end;
+
+procedure print_message_in_center(MAX_X, MAX_Y, MIN_X, MIN_Y:coordinates_type;
+    message : string);
+var
+    cor_x : coordinates_type;
+    cor_y : coordinates_type;
+begin
+    cor_y := ((MAX_Y - MIN_Y + 1) div 2) + MIN_Y - 1;
+    cor_x := ((MAX_X - MIN_Y + 1 - length(message)) div 2) + MIN_X - 1;
+    GotoXY(cor_x, cor_y);
+    write(message);
+    GotoXY(1, 1);
+end;
+
+function is_snake_eat_food(var input_snake : snake; input_food : food) : boolean;
+var
+    eat_food : boolean;
+begin
+    eat_food := false;
+    if ((input_snake.link_first^.cor_x = input_food.cor_x) and
+        (input_snake.link_first^.cor_y = input_food.cor_y)) then
+    begin
+        eat_food := true;
+    end;
+    is_snake_eat_food := eat_food;
+end;   
+
+procedure print_food(input_food : food);
+begin
+    GotoXY(input_food.cor_x, input_food.cor_y);
+    write('#');
+    GotoXY(1, 1);
+end;
+
+procedure generate_coord_food(var input_snake : snake; var input_food : food;
+    MAX_X, MAX_Y, MIN_X, MIN_Y : coordinates_type);
+begin
+    input_food.cor_x := random(MAX_X - MIN_X + 1) + MIN_X;
+    input_food.cor_y := random(MAX_Y - MIN_Y + 1) + MIN_Y;
 end;
 
 var
     my_snake: snake;
-    foods: link_segment;
     c: integer;
     MAX_GAME_SCREEN_X, MAX_GAME_SCREEN_Y,
     MIN_GAME_SCREEN_X, MIN_GAME_SCREEN_Y: coordinates_type;
-
+    game_food : food;
 begin
-    MAX_GAME_SCREEN_X := ScreenWidth;
+    MAX_GAME_SCREEN_X := ScreenWidth - 1;
     MAX_GAME_SCREEN_Y := ScreenHeight - 1;
-    MIN_GAME_SCREEN_X := 1;
-    MIN_GAME_SCREEN_Y := 1;
+    MIN_GAME_SCREEN_X := 2;
+    MIN_GAME_SCREEN_Y := 2;
     clrscr;
     GotoXY(1, 1);
 
     init_snake(my_snake, right, 20, 20);
     {create procedure that create start}
-    add_end_snake(my_snake, 20, 20);
-    add_end_snake(my_snake, 20, 20);
-    add_end_snake(my_snake, 20, 20);
-    add_end_snake(my_snake, 20, 20);
+    add_end_snake(my_snake, 19, 20);
+    add_end_snake(my_snake, 18, 20);
+    add_end_snake(my_snake, 17, 20);
+    add_end_snake(my_snake, 16, 20);
+
+    generate_coord_food(my_snake, game_food,MAX_GAME_SCREEN_X,
+                    MAX_GAME_SCREEN_Y, MIN_GAME_SCREEN_X, MIN_GAME_SCREEN_Y);
 
     while true do
     begin
         if not Keypressed then
         begin
-            {обрабатываю данные: не наступила ли змейка на себя?
-            тогда она умерает
-            не наступила ли змейка на стену?
-            тогда умирает
-            не скушала ли змейка еду?
-            тогд она растёт}
-
-            {смотрю есть ли еда на поле, если нет, то добавляю
-            меняю координаты сегментов змейки, будто она сделала движение
-            }
+            if snake_is_die(my_snake) then
+            begin
+                print_message_in_center(MAX_GAME_SCREEN_X, MAX_GAME_SCREEN_Y,
+                    MIN_GAME_SCREEN_X, MIN_GAME_SCREEN_Y, 'you die');
+                delay(3000);
+                break;
+            end;
+            if is_snake_eat_food(my_snake, game_food) then
+            begin
+                add_end_snake(my_snake, 1, 1);
+                generate_coord_food(my_snake, game_food,MAX_GAME_SCREEN_X,
+                    MAX_GAME_SCREEN_Y, MIN_GAME_SCREEN_X, MIN_GAME_SCREEN_Y);
+            end;
             snake_move(my_snake, MAX_GAME_SCREEN_X, MAX_GAME_SCREEN_Y,
                 MIN_GAME_SCREEN_X, MIN_GAME_SCREEN_Y);
-            {удаляю всё на экране}
-            {clrscr;}
             draw_clean_screen(MAX_GAME_SCREEN_X, MAX_GAME_SCREEN_Y,
                 MIN_GAME_SCREEN_X, MIN_GAME_SCREEN_Y);
-            {отрисовываю всё на экране}
             draw_snake(my_snake);
-            {draw_walls}
-            {жду какое-то веремя, т.к иначе она двигается слишком быстро}
+            print_food(game_food);
             delay(my_delay);
 
             continue
         end;
         get_key(c);
-        {обработчик нажатых клавиш}
         input_sybol(c, my_snake);
     end;
 end.
